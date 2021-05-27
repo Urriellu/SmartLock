@@ -1,0 +1,196 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>SmartLock</name>
+    </assembly>
+    <members>
+        <member name="T:SmartLock.IEnumerableOfSmartLockExtensions">
+            <summary>Extension methods for <see cref="T:System.Collections.Generic.IEnumerable`1"/> of <see cref="T:SmartLock.SmartLocker"/>.</summary>
+        </member>
+        <member name="M:SmartLock.IEnumerableOfSmartLockExtensions.CombinedLocker(System.Collections.Generic.IEnumerable{SmartLock.SmartLocker})">
+            <summary>Combine multiple <see cref="T:SmartLock.SmartLocker"/> objects to be able to lock all of them at the same time.</summary>
+        </member>
+        <member name="T:SmartLock.SmartLocker">
+            <summary>
+            Creates an object used to "lock" blocks of code, that is, pieces of code that cannot be executed at the same by different threads.
+            </summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.LockingThreadID">
+            <summary>
+            <see cref="P:System.Threading.Thread.ManagedThreadId"/> of the <see cref="T:System.Threading.Thread"/> that is currently keeping this object locked and is blocking other threads from executing.
+            </summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.HoldingTrace">
+            <summary>Stack trace that is holding this lock.</summary>
+        </member>
+        <member name="E:SmartLock.SmartLocker.OnLockTimedOut">
+            <summary>
+            Event triggered when a <see cref="M:SmartLock.SmartLocker.HardLock(System.Action,System.Nullable{System.TimeSpan})"/> or a <see cref="M:SmartLock.SmartLocker.LazyLock(System.Action,System.Nullable{System.TimeSpan})"/> has timed out and therefore the inner code will be either executed (in case of a Lazy Lock) or an exception is about to be thrown (in case of a Hard Lock).
+            </summary>
+        </member>
+        <member name="E:SmartLock.SmartLocker.OnLockDelayed">
+            <summary>
+            Event triggered when a <see cref="M:SmartLock.SmartLocker.PatientLock(System.Action,System.Nullable{System.TimeSpan})"/> is taking too long to acquire a lock, but it's still waiting.
+            </summary>
+        </member>
+        <member name="F:SmartLock.SmartLocker.DefaultTimeout">
+            <summary>
+            Default amount of time that this <see cref="T:SmartLock.SmartLocker"/> object will wait to acquire a lock before failing, executing anyway, or warning the user.
+            </summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.AmountLazyLocks">
+            <summary>Amount of Lazy Locks that have been acquired or skipped (that is, whose blocks of code have been executed). This includes both clean locks as well as expired locks. This does not include lock requests that are still waiting to be acquired.</summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.LazyLockLongestWait">
+            <summary>Maximum time awaited by a Lazy Lock before being acquired, out of all the times a Lazy Lock has been requested.</summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.LazyLockTotalWait">
+            <summary>Cumulative time awaited by all Lazy Lock requests.</summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.LazyLockAverageWait">
+            <summary>Average time taken by Lazy Lock requests to acquire a lock or to expire.</summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.AmountLazyLocksTimedOut">
+            <summary>Amount of Lazy Locks that have timed out and their blocks of code executed regardless.</summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.AmountPatientLocks">
+            <summary>Amount of Patient Lock requests that have fully acquired a lock.</summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.PatientLockLongestWait">
+            <summary>Maximum time awaited by a Patient Lock before being acquired.</summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.PatientLockTotalWait">
+            <summary>Cumulative time awaited by all Patient Lock requests.</summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.PatientLockAverageWait">
+            <summary>Average time taken by Patient Lock requests to acquire a lock.</summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.AmountPatientLocksDelayed">
+            <summary>Amount of times Patient Locks have been delayed. This is counted every time a "warning timeout" expires, meaning that a single Patient Lock that waits for a long time and expires multiple times gets counted multiple times.</summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.AmountSuccessfulHardLocks">
+            <summary>Amount of Hard Lock requests that have fully acquired a lock.</summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.HardLockLongestWait">
+            <summary>Maximum time awaited by a Hard Lock before being acquired.</summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.HardLockTotalWait">
+            <summary>Total amount of time waited to acquire successfully-acquired Hard Locks. This does not count timed out (failed) Hard Locks.</summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.HardLockAverageWait">
+            <summary>Average time awaited for successfully-acquired Hard Locks. This does not count timed out (failed) Hard Locks.</summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.AmountHardLocksTimedOut">
+            <summary>Amount of times a Hard Lock has timed out, thrown an exception, and its code block skipped.</summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.AmountLocks">
+            <summary>Total amount of locks requested.</summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.TotalWait">
+            <summary>Total amount of time waiting to acquire locks.</summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.AverageWait">
+            <summary>Average time awaited before executing locked blocks of code. This includes expired Lazy Locks (because their code gets executed anyway) but does NOT include expired expired Hard Locks (because their code doesn't get executed).</summary>
+        </member>
+        <member name="M:SmartLock.SmartLocker.LazyLock(System.Action,System.Nullable{System.TimeSpan})">
+            <summary>
+            Tries to acquire a lock for a given amount of time (or the <see cref="F:SmartLock.SmartLocker.DefaultTimeout"/> default time), but if the lock is not acquired the event <see cref="E:SmartLock.SmartLocker.OnLockTimedOut"/> is triggered and the code executes anyway.
+            </summary>
+            <param name="action">Code to be executed only after acquiring the lock (or timing out).</param>
+            <param name="runAnywayAfter">The code will be executed after waiting for this amount of time even if it fails to lock.</param>
+        </member>
+        <member name="M:SmartLock.SmartLocker.LazyLock``1(System.Func{``0},System.Nullable{System.TimeSpan})">
+            <summary>
+            Tries to acquire a lock for a given amount of time (or the <see cref="F:SmartLock.SmartLocker.DefaultTimeout"/> default time), but if the lock is not acquired the event <see cref="E:SmartLock.SmartLocker.OnLockTimedOut"/> is triggered and the code executes anyway.
+            </summary>
+            <typeparam name="T">Type returned by the action to be executed within the lock.</typeparam>
+            <param name="action">Code to be executed only after acquiring the lock (or timing out).</param>
+            <param name="runAnywayAfter">The code will be executed after waiting for this amount of time even if it fails to lock.</param>
+        </member>
+        <member name="M:SmartLock.SmartLocker.PatientLock(System.Action,System.Nullable{System.TimeSpan})">
+            <summary>
+            Tries to acquire a lock for as long as needed, but shows a warning every time it times out (or the <see cref="F:SmartLock.SmartLocker.DefaultTimeout"/> default time).
+            </summary>
+            <param name="action">Code to be executed only after acquiring the lock (or timing out).</param>
+            <param name="warnevery">Executes the <see cref="E:SmartLock.SmartLocker.OnLockDelayed"/> every time it times out without acquiring the lock.</param>
+        </member>
+        <member name="M:SmartLock.SmartLocker.PatientLock``1(System.Func{``0},System.Nullable{System.TimeSpan})">
+            <summary>
+            Tries to acquire a lock for as long as needed, but shows a warning every time it times out (or the <see cref="F:SmartLock.SmartLocker.DefaultTimeout"/> default time).
+            </summary>
+            <param name="action">Code to be executed only after acquiring the lock (or timing out).</param>
+            <param name="warnevery">Executes the <see cref="E:SmartLock.SmartLocker.OnLockDelayed"/> every time it times out without acquiring the lock.</param>
+        </member>
+        <member name="M:SmartLock.SmartLocker.HardLock(System.Action,System.Nullable{System.TimeSpan})">
+            <summary>
+            Tries to acquire a lock for a given amount of time (or the <see cref="F:SmartLock.SmartLocker.DefaultTimeout"/> default time) or throws an exception if unable to obtain it.
+            </summary>
+            <param name="action">Code to be executed only after (and if) acquiring the lock.</param>
+            <param name="dieafter">Throws an exception if the lock is not acquired in this time.</param>
+        </member>
+        <member name="M:SmartLock.SmartLocker.HardLock``1(System.Func{``0},System.Nullable{System.TimeSpan})">
+            <summary>
+            Tries to acquire a lock for a given amount of time (or the <see cref="F:SmartLock.SmartLocker.DefaultTimeout"/> default time) or throws an exception if unable to obtain it.
+            </summary>
+            <param name="action">Code to be executed only after (and if) acquiring the lock.</param>
+            <param name="dieafter">Throws an exception if the lock is not acquired in this time.</param>
+        </member>
+        <member name="M:SmartLock.SmartLocker.Combine(SmartLock.SmartLocker[])">
+            <summary>Combine multiple <see cref="T:SmartLock.SmartLocker"/> objects like this one to be able to lock all of them at the same time.</summary>
+        </member>
+        <member name="T:SmartLock.SmartMultiLocker">
+            <summary>
+            Represents a combination of multiple <see cref="T:SmartLock.SmartLocker"/> locking objects, allowing to request locks on all of them at the same time.
+            </summary>
+        </member>
+        <member name="M:SmartLock.SmartMultiLocker.#ctor(SmartLock.SmartLocker[])">
+            <summary>
+            Instantiate a new group of <see cref="T:SmartLock.SmartLocker"/> objects so that we can lock on them at the same time.
+            </summary>
+            <param name="lockobjs">List of objects to be locked together</param>
+        </member>
+        <member name="M:SmartLock.SmartMultiLocker.PatientLock(System.Action,System.Nullable{System.TimeSpan})">
+            <summary>
+            Tries to acquire a lock for as long as needed, but shows a warning every time it times out (or the <see cref="F:SmartLock.SmartLocker.DefaultTimeout"/> default time).
+            </summary>
+            <param name="action">Code to be executed only after acquiring the lock (or timing out).</param>
+            <param name="warnevery">Executes the <see cref="E:SmartLock.SmartLocker.OnLockDelayed"/> every time it times out without acquiring the lock.</param>
+        </member>
+        <member name="M:SmartLock.SmartMultiLocker.PatientLock``1(System.Func{``0},System.Nullable{System.TimeSpan})">
+            <summary>
+            Tries to acquire a lock for as long as needed, but shows a warning every time it times out (or the <see cref="F:SmartLock.SmartLocker.DefaultTimeout"/> default time).
+            </summary>
+            <param name="action">Code to be executed only after acquiring the lock (or timing out).</param>
+            <param name="warnevery">Executes the <see cref="E:SmartLock.SmartLocker.OnLockDelayed"/> every time it times out without acquiring the lock.</param>
+        </member>
+        <member name="M:SmartLock.SmartMultiLocker.LazyLock(System.Action,System.Nullable{System.TimeSpan})">
+            <summary>
+            Tries to acquire a lock for a given amount of time (or the <see cref="F:SmartLock.SmartLocker.DefaultTimeout"/> default time), but if the lock is not acquired the event <see cref="E:SmartLock.SmartLocker.OnLockTimedOut"/> is triggered and the code executes anyway.
+            </summary>
+            <param name="action">Code to be executed only after acquiring the lock (or timing out).</param>
+            <param name="runAnywayAfter">The code will be executed after waiting for this amount of time even if it fails to lock.</param>
+        </member>
+        <member name="M:SmartLock.SmartMultiLocker.LazyLock``1(System.Func{``0},System.Nullable{System.TimeSpan})">
+            <summary>
+            Tries to acquire a lock for a given amount of time (or the <see cref="F:SmartLock.SmartLocker.DefaultTimeout"/> default time), but if the lock is not acquired the event <see cref="E:SmartLock.SmartLocker.OnLockTimedOut"/> is triggered and the code executes anyway.
+            </summary>
+            <typeparam name="T">Type returned by the action to be executed within the lock.</typeparam>
+            <param name="action">Code to be executed only after acquiring the lock (or timing out).</param>
+            <param name="timeout">The code will be executed after waiting for this amount of time even if it fails to lock.</param>
+        </member>
+        <member name="M:SmartLock.SmartMultiLocker.HardLock(System.Action,System.Nullable{System.TimeSpan})">
+            <summary>
+            Tries to acquire a lock for a given amount of time (or the <see cref="F:SmartLock.SmartLocker.DefaultTimeout"/> default time) or throws an exception if unable to obtain it.
+            </summary>
+            <param name="action">Code to be executed only after (and if) acquiring the lock.</param>
+            <param name="dieafter">Throws an exception if the lock is not acquired in this time.</param>
+        </member>
+        <member name="M:SmartLock.SmartMultiLocker.HardLock``1(System.Func{``0},System.Nullable{System.TimeSpan})">
+            <summary>
+            Tries to acquire a lock for a given amount of time (or the <see cref="F:SmartLock.SmartLocker.DefaultTimeout"/> default time) or throws an exception if unable to obtain it.
+            </summary>
+            <param name="action">Code to be executed only after (and if) acquiring the lock.</param>
+            <param name="dieafter">Throws an exception if the lock is not acquired in this time.</param>
+        </member>
+    </members>
+</doc>
