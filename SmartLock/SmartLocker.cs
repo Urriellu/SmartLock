@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace SmartLock
@@ -239,18 +240,18 @@ namespace SmartLock
                     if (throwexception)
                     {
                         lock (statsLocker) AmountHardLocksTimedOut++;
-                        OnLockTimedOut?.Invoke((this, $"Unable to acquire lock, requested by {GetStackTrace()}, being held for too long by {HoldingTrace}. Failing..."));
-                        throw new Exception($"Unable to acquire lock, requested by {GetStackTrace()}, being held for too long by {HoldingTrace}.");
+                        OnLockTimedOut?.Invoke((this, $"Unable to acquire lock, requested by:{Environment.NewLine}{GetStackTrace()}{Environment.NewLine}Being held for too long by:{Environment.NewLine}{HoldingTrace}{Environment.NewLine}Failing..."));
+                        throw new Exception($"Unable to acquire lock, requested by:{Environment.NewLine}{GetStackTrace()}{Environment.NewLine}Being held for too long by:{Environment.NewLine}{HoldingTrace}{Environment.NewLine}.");
                     }
                     else if (keepretrying)
                     {
                         lock (statsLocker) AmountPatientLocksDelayed++;
-                        OnLockDelayed?.Invoke((this, $"Unable to acquire lock, requested by {GetStackTrace()}, being held for too long by {HoldingTrace}. Retrying..."));
+                        OnLockDelayed?.Invoke((this, $"Unable to acquire lock, requested by:{Environment.NewLine}{GetStackTrace()}{Environment.NewLine}Being held for too long by:{Environment.NewLine}{HoldingTrace}{Environment.NewLine}Retrying..."));
                     }
                     else
                     {
                         lock (statsLocker) AmountLazyLocksTimedOut++;
-                        OnLockTimedOut?.Invoke((this, $"Unable to acquire lock, requested by {GetStackTrace()}, being held for too long by {HoldingTrace}. Executing anyway..."));
+                        OnLockTimedOut?.Invoke((this, $"Unable to acquire lock, requested by:{Environment.NewLine}{GetStackTrace()}{Environment.NewLine}Being held for too long by:{Environment.NewLine}{HoldingTrace}{Environment.NewLine}Executing anyway..."));
                     }
                 }
             } while (!locked && keepretrying);
@@ -283,14 +284,13 @@ namespace SmartLock
             //save a stack trace for the code that is holding the lock
             HoldingTrace = GetStackTrace();
             LockingThreadID = Thread.CurrentThread.ManagedThreadId;
-
         }
 
         static string GetStackTrace()
         {
             StackTrace trace = new StackTrace();
-            string threadID = Thread.CurrentThread.Name ?? "";
-            return "[" + threadID + "]" + trace.ToString().Replace('\n', '|').Replace("\r", "");
+            string threadID = Thread.CurrentThread.Name ?? "(unnamed thread)";
+            return "[" + threadID + "]" + Environment.NewLine + string.Join(Environment.NewLine, trace.ToString().Replace("\r\n", "\n").Replace("\n\r", "\n").Replace("\r", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries).Where(L => !L.Contains(typeof(SmartLocker).FullName)));
         }
 
         void Exit()
@@ -298,7 +298,6 @@ namespace SmartLock
             try
             {
                 Monitor.Exit(lockobj);
-                HoldingTrace = "";
             }
             catch
             {
