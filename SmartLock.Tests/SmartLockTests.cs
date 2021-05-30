@@ -10,9 +10,9 @@ namespace SmartLock.Tests
     public class SmartLockTests
     {
         [TestMethod]
-        public void T01_PatientLock()
+        public void T01_PatientLockTest()
         {
-            try { Thread.CurrentThread.Name = nameof(T01_PatientLock); } catch { }
+            try { Thread.CurrentThread.Name = nameof(T01_PatientLockTest); } catch { }
 
             SmartLocker locker = new SmartLocker();
 
@@ -71,9 +71,9 @@ namespace SmartLock.Tests
         }
 
         [TestMethod]
-        public void T02_HardAndLazyLocksTimeout()
+        public void T02_HardAndLazyLocksTimeoutTest()
         {
-            try { Thread.CurrentThread.Name = nameof(T02_HardAndLazyLocksTimeout); } catch { }
+            try { Thread.CurrentThread.Name = nameof(T02_HardAndLazyLocksTimeoutTest); } catch { }
 
             int amounttimeouts = 0;
             SmartLocker.OnLockTimedOut += (err) =>
@@ -149,11 +149,10 @@ namespace SmartLock.Tests
             SmartLocker.ClearEvents();
         }
 
-
         [TestMethod]
-        public void T03_Multilock()
+        public void T03_MultilockTest()
         {
-            try { Thread.CurrentThread.Name = nameof(T03_Multilock); } catch { }
+            try { Thread.CurrentThread.Name = nameof(T03_MultilockTest); } catch { }
 
             int amountwarns = 0;
             SmartLocker.OnLockTimedOut += (err) => Assert.Fail();
@@ -216,6 +215,42 @@ namespace SmartLock.Tests
             Task.WaitAll(t1, t2); // wait until all background tasks finished
 
             SmartLocker.ClearEvents();
+        }
+
+
+
+        [TestMethod]
+        public void T04_ReentryTest()
+        {
+            try { Thread.CurrentThread.Name = nameof(T04_ReentryTest); } catch { }
+
+            SmartLocker.OnLockTimedOut += (err) => Assert.Fail();
+            SmartLocker.OnLockDelayed += (err) => Assert.Fail();
+
+            int blocksExecuted = 0;
+
+            SmartLocker locker = new SmartLocker();
+            Debug.WriteLine($"Going to enter first lock...");
+            locker.HardLock(() =>
+            {
+                Debug.WriteLine($"Entered first lock");
+                blocksExecuted++;
+                locker.HardLock(() =>
+                {
+                    Debug.WriteLine($"Entered second lock");
+                    blocksExecuted++;
+                    locker.HardLock(() =>
+                    {
+                        Debug.WriteLine($"Entered third lock");
+                        blocksExecuted++;
+                    });
+                    Debug.WriteLine($"Left third lock");
+                });
+                Debug.WriteLine($"Left second lock");
+            });
+            Debug.WriteLine($"Left all locks");
+
+            Assert.AreEqual(3, blocksExecuted);
         }
     }
 }
