@@ -19,7 +19,7 @@ namespace SmartLock
         /// <param name="lockobjs">List of objects to be locked together</param>
         public SmartMultiLocker(params SmartLocker[] lockobjs)
         {
-            this.LockObjs = lockobjs.ToList();
+            this.LockObjs = lockobjs.Distinct().ToList();
         }
 
         /// <summary>
@@ -41,7 +41,7 @@ namespace SmartLock
 
             // Start acquiring locks...
             List<Task> acquiringTasks = new List<Task>();
-            foreach (var toLock in LockObjs)
+            foreach (SmartLocker toLock in LockObjs)
             {
                 acquiringTasks.Add(Task.Factory.StartNew(() =>
                 {
