@@ -45,7 +45,7 @@ namespace SmartLock
             {
                 acquiringTasks.Add(Task.Factory.StartNew(() =>
                 {
-                    Thread.CurrentThread.Name = $"{nameof(SmartMultiLocker)}: Obtain one lock for {toLock.HoldingTrace}";
+                    try { Thread.CurrentThread.Name = $"{nameof(SmartMultiLocker)}: Obtain one lock for {toLock.HoldingTrace}"; } catch { }
                     toLock.PatientLock(commonActionAfterEntering, warnevery);
                 }));
             }
@@ -85,7 +85,7 @@ namespace SmartLock
             {
                 acquiringTasks.Add(Task.Factory.StartNew(() =>
                 {
-                    Thread.CurrentThread.Name = $"{nameof(SmartMultiLocker)}: Obtain one lock for {toLock.HoldingTrace}";
+                    try { Thread.CurrentThread.Name = $"{nameof(SmartMultiLocker)}: Obtain one lock for {toLock.HoldingTrace}"; } catch { }
                     toLock.PatientLock(commonActionAfterEntering, warnevery);
                 }));
             }
@@ -127,7 +127,7 @@ namespace SmartLock
             {
                 acquiringTasks.Add(Task.Factory.StartNew(() =>
                 {
-                    Thread.CurrentThread.Name = $"{nameof(SmartMultiLocker)}: Obtain one lock for {toLock.HoldingTrace}";
+                    try { Thread.CurrentThread.Name = $"{nameof(SmartMultiLocker)}: Obtain one lock for {toLock.HoldingTrace}"; } catch { }
                     toLock.LazyLock(commonActionAfterEntering, runAnywayAfter);
                 }));
             }
@@ -168,7 +168,7 @@ namespace SmartLock
             {
                 acquiringTasks.Add(Task.Factory.StartNew(() =>
                 {
-                    Thread.CurrentThread.Name = $"{nameof(SmartMultiLocker)}: Obtain one lock for {toLock.HoldingTrace}";
+                    try { Thread.CurrentThread.Name = $"{nameof(SmartMultiLocker)}: Obtain one lock for {toLock.HoldingTrace}"; } catch { }
                     toLock.LazyLock(commonActionAfterEntering, timeout);
                 }));
             }
@@ -210,7 +210,7 @@ namespace SmartLock
             {
                 acquiringTasks.Add(Task.Factory.StartNew(() =>
                 {
-                    Thread.CurrentThread.Name = $"{nameof(SmartMultiLocker)}: Obtain one lock for {toLock.HoldingTrace}";
+                    try { Thread.CurrentThread.Name = $"{nameof(SmartMultiLocker)}: Obtain one lock for {toLock.HoldingTrace}"; } catch { }
                     toLock.HardLock(commonActionAfterEntering, dieafter);
                 }));
             }
@@ -250,7 +250,7 @@ namespace SmartLock
             {
                 acquiringTasks.Add(Task.Factory.StartNew(() =>
                 {
-                    Thread.CurrentThread.Name = $"{nameof(SmartMultiLocker)}: Obtain one lock for {toLock.HoldingTrace}";
+                    try { Thread.CurrentThread.Name = $"{nameof(SmartMultiLocker)}: Obtain one lock for {toLock.HoldingTrace}"; } catch { }
                     toLock.HardLock(commonActionAfterEntering, dieafter);
                 }));
             }
