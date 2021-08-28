@@ -152,10 +152,6 @@ namespace SmartLock
                 Enter(warnevery.Value, keepretrying: true, throwexception: false);
                 action.Invoke();
             }
-            catch (Exception ex)
-            {
-                throw new Exception($"{nameof(SmartLocker)}", ex);
-            }
             finally
             {
                 Exit();
