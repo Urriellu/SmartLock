@@ -10,7 +10,7 @@ namespace SmartLock.Sample
     {
         static void Main(string[] args)
         {
-            Thread.CurrentThread.Name = "Main thread";
+            Thread.CurrentThread.Name = $"Main thread [{Thread.CurrentThread.ManagedThreadId}]";
 
             SmartLocker.OnLockDelayed += (e) => Debug.WriteLine(e.Msg);
             SmartLocker.OnLockTimedOut += (e) => Debug.WriteLine(e.Msg);
