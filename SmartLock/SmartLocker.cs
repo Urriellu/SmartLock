@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -20,6 +21,10 @@ namespace SmartLock
 
         /// <summary>Stack trace that is holding this lock.</summary>
         public string HoldingTrace { get; private set; } = "";
+
+        public DateTime? HeldSince { get; private set; } = null;
+
+        public TimeSpan? HeldFor => DateTime.Now - HeldSince;
 
         /// <summary>
         /// Event triggered when a <see cref="HardLock(Action, TimeSpan?)"/> or a <see cref="LazyLock(Action, TimeSpan?)"/> has timed out and therefore the inner code will be either executed (in case of a Lazy Lock) or an exception is about to be thrown (in case of a Hard Lock).
@@ -107,10 +112,6 @@ namespace SmartLock
                 Enter(runAnywayAfter.Value, keepretrying: false, throwexception: false);
                 action.Invoke();
             }
-            catch (Exception ex)
-            {
-                throw new Exception($"{nameof(SmartLocker)}", ex);
-            }
             finally
             {
                 Exit();
@@ -192,13 +193,33 @@ namespace SmartLock
                 Enter(dieafter.Value, keepretrying: false, throwexception: true);
                 action.Invoke();
             }
-            catch (Exception ex)
-            {
-                throw new Exception($"{nameof(SmartLocker)}", ex);
-            }
             finally
             {
                 Exit();
+            }
+        }
+
+        public void HardLockWithRetries(Action action, TimeSpan dieafter)
+        {
+            bool retry = true;
+            while (retry)
+            {
+                try
+                {
+                    retry = false;
+                    HardLock(action, dieafter);
+                }
+                catch (HardLockTimeoutException)
+                {
+                    retry = true;
+                }
+                catch (AggregateException ex)
+                {
+                    Exception e = ex;
+                    while (!(e is HardLockTimeoutException) && !(e.InnerException is null)) e = e.InnerException;
+                    if (e is HardLockTimeoutException) retry = true;
+                    else throw;
+                }
             }
         }
 
@@ -236,18 +257,18 @@ namespace SmartLock
                     if (throwexception)
                     {
                         lock (statsLocker) AmountHardLocksTimedOut++;
-                        OnLockTimedOut?.Invoke((this, $"Unable to acquire lock, requested by:{Environment.NewLine}{GetStackTrace()}{Environment.NewLine}Being held for too long by:{Environment.NewLine}{HoldingTrace}{Environment.NewLine}Failing..."));
-                        throw new Exception($"Unable to acquire lock, requested by:{Environment.NewLine}{GetStackTrace()}{Environment.NewLine}Being held for too long by:{Environment.NewLine}{HoldingTrace}{Environment.NewLine}.");
+                        OnLockTimedOut?.Invoke((this, $"Unable to acquire lock for {sw.Elapsed.TotalSeconds:N0} seconds, requested by:{Environment.NewLine}{GetStackTrace()}{Environment.NewLine}Being held for too long by:{Environment.NewLine}{HoldingTrace}{Environment.NewLine}Failing..."));
+                        throw new HardLockTimeoutException($"Unable to acquire lock for {sw.Elapsed.TotalSeconds:N0} seconds, requested by:{Environment.NewLine}{GetStackTrace()}{Environment.NewLine}Being held for too long by:{Environment.NewLine}{HoldingTrace}{Environment.NewLine}.");
                     }
                     else if (keepretrying)
                     {
                         lock (statsLocker) AmountPatientLocksDelayed++;
-                        OnLockDelayed?.Invoke((this, $"Unable to acquire lock, requested by:{Environment.NewLine}{GetStackTrace()}{Environment.NewLine}Being held for too long by:{Environment.NewLine}{HoldingTrace}{Environment.NewLine}Retrying..."));
+                        OnLockDelayed?.Invoke((this, $"Unable to acquire lock for {sw.Elapsed.TotalSeconds:N0} seconds, requested by:{Environment.NewLine}{GetStackTrace()}{Environment.NewLine}Being held for too long by:{Environment.NewLine}{HoldingTrace}{Environment.NewLine}Retrying..."));
                     }
                     else
                     {
                         lock (statsLocker) AmountLazyLocksTimedOut++;
-                        OnLockTimedOut?.Invoke((this, $"Unable to acquire lock, requested by:{Environment.NewLine}{GetStackTrace()}{Environment.NewLine}Being held for too long by:{Environment.NewLine}{HoldingTrace}{Environment.NewLine}Executing anyway..."));
+                        OnLockTimedOut?.Invoke((this, $"Unable to acquire lock for {sw.Elapsed.TotalSeconds:N0} seconds, requested by:{Environment.NewLine}{GetStackTrace()}{Environment.NewLine}Being held for too long by:{Environment.NewLine}{HoldingTrace}{Environment.NewLine}Executing anyway..."));
                     }
                 }
             } while (!locked && keepretrying);
@@ -280,13 +301,16 @@ namespace SmartLock
             //save a stack trace for the code that is holding the lock
             HoldingTrace = GetStackTrace();
             LockingThreadID = Thread.CurrentThread.ManagedThreadId;
+            HeldSince = DateTime.Now;
         }
 
         static string GetStackTrace()
         {
             StackTrace trace = new StackTrace();
             string threadID = Thread.CurrentThread.Name ?? "(unnamed thread)";
-            return "[" + threadID + "]" + Environment.NewLine + string.Join(Environment.NewLine, trace.ToString().Replace("\r\n", "\n").Replace("\n\r", "\n").Replace("\r", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries).Where(L => !L.Contains(typeof(SmartLocker).FullName)));
+            List<string> traceLines = trace.ToString().Replace("\r\n", "\n").Replace("\n\r", "\n").Replace("\r", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries).Where(L => !L.Contains(typeof(SmartLocker).FullName)).ToList();
+            while (traceLines.Count > 0 && traceLines.Last().TrimStart().StartsWith("at System.")) traceLines.RemoveAt(traceLines.Count - 1); // remove not-my-code stracktrace
+            return "[" + threadID + "]" + Environment.NewLine + string.Join(Environment.NewLine, traceLines);
         }
 
         void Exit()
