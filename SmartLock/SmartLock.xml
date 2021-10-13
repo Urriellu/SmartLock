@@ -4,6 +4,22 @@
         <name>SmartLock</name>
     </assembly>
     <members>
+        <member name="T:SmartLock.HardLockTimeoutException">
+            <summary>
+            Represents an error that occurs when a <see cref="T:SmartLock.SmartLocker"/> Hard Lock times out.
+            </summary>
+        </member>
+        <member name="M:SmartLock.HardLockTimeoutException.#ctor(System.String)">
+            <summary>
+            Initialize a new Hard Lock Timeout Exception.
+            </summary>
+            <param name="msg"></param>
+        </member>
+        <member name="M:SmartLock.HardLockTimeoutException.#ctor(System.String,System.Exception)">
+            <summary>
+            Initialize a new Hard Lock Timeout Exception.
+            </summary>
+        </member>
         <member name="T:SmartLock.IEnumerableOfSmartLockExtensions">
             <summary>Extension methods for <see cref="T:System.Collections.Generic.IEnumerable`1"/> of <see cref="T:SmartLock.SmartLocker"/>.</summary>
         </member>
@@ -22,6 +38,16 @@
         </member>
         <member name="P:SmartLock.SmartLocker.HoldingTrace">
             <summary>Stack trace that is holding this lock.</summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.HeldSince">
+            <summary>
+            Last time a thread successfully obtained this lock.
+            </summary>
+        </member>
+        <member name="P:SmartLock.SmartLocker.HeldFor">
+            <summary>
+            Amount of time a thread has been holding this lock.
+            </summary>
         </member>
         <member name="E:SmartLock.SmartLocker.OnLockTimedOut">
             <summary>
@@ -128,12 +154,28 @@
             <param name="action">Code to be executed only after (and if) acquiring the lock.</param>
             <param name="dieafter">Throws an exception if the lock is not acquired in this time.</param>
         </member>
+        <member name="M:SmartLock.SmartLocker.HardLockWithRetries(System.Action,System.TimeSpan)">
+            <summary>
+            Try to enter a Hard Lock which instead of dying it automatically tries to acquire the lock again. This behavior in practice is similar to a Patient Lock, but if the Action inside this Hard Lock contains nested Hard Locks and those Hard Locks time out, this "Hard Lock With Retries" will try to acquire the nested Hard Locks again. 
+            </summary>
+            <remarks>This is used for creating multi-locks while avoiding race conditions between different <see cref="T:SmartLock.SmartLocker"/> objects. When you need to acquire multiple locks at the same time you should use a <see cref="M:SmartLock.SmartLocker.HardLockWithRetries(System.Action,System.TimeSpan)"/> first and nest inside it as many <see cref="M:SmartLock.SmartLocker.HardLock(System.Action,System.Nullable{System.TimeSpan})"/> as you need.</remarks>
+            <param name="action"></param>
+            <param name="retryAfter"></param>
+        </member>
         <member name="M:SmartLock.SmartLocker.HardLock``1(System.Func{``0},System.Nullable{System.TimeSpan})">
             <summary>
             Tries to acquire a lock for a given amount of time (or the <see cref="F:SmartLock.SmartLocker.DefaultTimeout"/> default time) or throws an exception if unable to obtain it.
             </summary>
             <param name="action">Code to be executed only after (and if) acquiring the lock.</param>
             <param name="dieafter">Throws an exception if the lock is not acquired in this time.</param>
+        </member>
+        <member name="F:SmartLock.SmartLocker.NamespacesToIgnoreInStackTrace">
+            <summary>
+            List of namespaces to be skipped when storing and displaying a locking stack trace.
+            </summary>
+            <remarks>
+            It is recommended to list all external libraries that your program uses which create threads/tasks which eventually hold <see cref="T:SmartLock.SmartLocker"/> objects inside your code. For example, if you use a third-party WebSocket Server, this server will probably spawn a thread per user request, and if you don't add here the WebSocket server namespace, your stack trace logging will be filled with internal WebSocket Server method calls.
+            </remarks>
         </member>
         <member name="M:SmartLock.SmartLocker.Combine(SmartLock.SmartLocker[])">
             <summary>Combine multiple <see cref="T:SmartLock.SmartLocker"/> objects like this one to be able to lock all of them at the same time.</summary>

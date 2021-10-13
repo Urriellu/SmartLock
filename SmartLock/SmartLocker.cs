@@ -22,8 +22,14 @@ namespace SmartLock
         /// <summary>Stack trace that is holding this lock.</summary>
         public string HoldingTrace { get; private set; } = "";
 
+        /// <summary>
+        /// Last time a thread successfully obtained this lock.
+        /// </summary>
         public DateTime? HeldSince { get; private set; } = null;
 
+        /// <summary>
+        /// Amount of time a thread has been holding this lock.
+        /// </summary>
         public TimeSpan? HeldFor => DateTime.Now - HeldSince;
 
         /// <summary>
@@ -112,10 +118,7 @@ namespace SmartLock
                 Enter(runAnywayAfter.Value, keepretrying: false, throwexception: false);
                 action.Invoke();
             }
-            finally
-            {
-                Exit();
-            }
+            finally { Exit(); }
         }
 
         /// <summary>
@@ -133,10 +136,8 @@ namespace SmartLock
                 Enter(runAnywayAfter.Value, keepretrying: false, throwexception: false);
                 ret = action.Invoke();
             }
-            finally
-            {
-                Exit();
-            }
+            finally { Exit(); }
+
             return ret;
         }
 
@@ -153,10 +154,7 @@ namespace SmartLock
                 Enter(warnevery.Value, keepretrying: true, throwexception: false);
                 action.Invoke();
             }
-            finally
-            {
-                Exit();
-            }
+            finally { Exit(); }
         }
 
         /// <summary>
@@ -173,10 +171,8 @@ namespace SmartLock
                 Enter(warnevery.Value, keepretrying: true, throwexception: false);
                 ret = action.Invoke();
             }
-            finally
-            {
-                Exit();
-            }
+            finally { Exit(); }
+
             return ret;
         }
 
@@ -193,13 +189,16 @@ namespace SmartLock
                 Enter(dieafter.Value, keepretrying: false, throwexception: true);
                 action.Invoke();
             }
-            finally
-            {
-                Exit();
-            }
+            finally { Exit(); }
         }
 
-        public void HardLockWithRetries(Action action, TimeSpan dieafter)
+        /// <summary>
+        /// Try to enter a Hard Lock which instead of dying it automatically tries to acquire the lock again. This behavior in practice is similar to a Patient Lock, but if the Action inside this Hard Lock contains nested Hard Locks and those Hard Locks time out, this "Hard Lock With Retries" will try to acquire the nested Hard Locks again. 
+        /// </summary>
+        /// <remarks>This is used for creating multi-locks while avoiding race conditions between different <see cref="SmartLocker"/> objects. When you need to acquire multiple locks at the same time you should use a <see cref="HardLockWithRetries"/> first and nest inside it as many <see cref="HardLock"/> as you need.</remarks>
+        /// <param name="action"></param>
+        /// <param name="retryAfter"></param>
+        public void HardLockWithRetries(Action action, TimeSpan retryAfter)
         {
             bool retry = true;
             while (retry)
@@ -207,18 +206,17 @@ namespace SmartLock
                 try
                 {
                     retry = false;
-                    HardLock(action, dieafter);
+                    HardLock(action, retryAfter);
                 }
-                catch (HardLockTimeoutException)
-                {
-                    retry = true;
-                }
+                catch (HardLockTimeoutException) { retry = true; }
                 catch (AggregateException ex)
                 {
                     Exception e = ex;
                     while (!(e is HardLockTimeoutException) && !(e.InnerException is null)) e = e.InnerException;
-                    if (e is HardLockTimeoutException) retry = true;
-                    else throw;
+                    if (e is HardLockTimeoutException)
+                        retry = true;
+                    else
+                        throw;
                 }
             }
         }
@@ -237,10 +235,8 @@ namespace SmartLock
                 Enter(dieafter.Value, keepretrying: false, throwexception: true);
                 ret = action.Invoke();
             }
-            finally
-            {
-                Exit();
-            }
+            finally { Exit(); }
+
             return ret;
         }
 
@@ -251,7 +247,8 @@ namespace SmartLock
             do
             {
                 locked = Monitor.TryEnter(lockobj, timeout);
-                if (locked) sw.Stop();
+                if (locked)
+                    sw.Stop();
                 else
                 {
                     if (throwexception)
@@ -304,21 +301,26 @@ namespace SmartLock
             HeldSince = DateTime.Now;
         }
 
+        /// <summary>
+        /// List of namespaces to be skipped when storing and displaying a locking stack trace.
+        /// </summary>
+        /// <remarks>
+        /// It is recommended to list all external libraries that your program uses which create threads/tasks which eventually hold <see cref="SmartLocker"/> objects inside your code. For example, if you use a third-party WebSocket Server, this server will probably spawn a thread per user request, and if you don't add here the WebSocket server namespace, your stack trace logging will be filled with internal WebSocket Server method calls.
+        /// </remarks>
+        public static readonly List<string> NamespacesToIgnoreInStackTrace = new List<string>();
+
         static string GetStackTrace()
         {
             StackTrace trace = new StackTrace();
             string threadID = Thread.CurrentThread.Name ?? "(unnamed thread)";
             List<string> traceLines = trace.ToString().Replace("\r\n", "\n").Replace("\n\r", "\n").Replace("\r", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries).Where(L => !L.Contains(typeof(SmartLocker).FullName)).ToList();
-            while (traceLines.Count > 0 && traceLines.Last().TrimStart().StartsWith("at System.")) traceLines.RemoveAt(traceLines.Count - 1); // remove not-my-code stracktrace
+            while (traceLines.Count > 0 && (traceLines.Last().TrimStart().StartsWith("at System.") || NamespacesToIgnoreInStackTrace.Any(n => traceLines.Last().TrimStart().StartsWith($"at {n}.")))) traceLines.RemoveAt(traceLines.Count - 1); // remove not-my-code stracktrace
             return "[" + threadID + "]" + Environment.NewLine + string.Join(Environment.NewLine, traceLines);
         }
 
         void Exit()
         {
-            try
-            {
-                Monitor.Exit(lockobj);
-            }
+            try { Monitor.Exit(lockobj); }
             catch
             {
                 // this typically happens when a Lazy Lock has not been acquired and therefore the code executed anyway
@@ -326,7 +328,6 @@ namespace SmartLock
         }
 
         /// <summary>Combine multiple <see cref="SmartLocker"/> objects like this one to be able to lock all of them at the same time.</summary>
-        public SmartMultiLocker Combine(params SmartLocker[] otherSmartLocks) => new SmartMultiLocker(new SmartLocker[] { this }.Concat(otherSmartLocks).ToArray());
+        public SmartMultiLocker Combine(params SmartLocker[] otherSmartLocks) => new SmartMultiLocker(new SmartLocker[] {this}.Concat(otherSmartLocks).ToArray());
     }
-
 }
