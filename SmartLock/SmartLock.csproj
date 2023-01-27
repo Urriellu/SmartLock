@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.1;netcoreapp3.1;net5.0</TargetFrameworks>
+    <TargetFrameworks>net5.0;net6.0;netcoreapp3.1;netstandard2.1</TargetFrameworks>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>Adrian B. [Urriellu]</Authors>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
@@ -10,7 +10,7 @@
     <PackageReleaseNotes>lock, multithreading, mutex, synchronization</PackageReleaseNotes>
     <Description>Multi-threading synchronization library for .NET which supports timed locks (optionally executing locked code upon time out), warnings on potential deadlocks (locks that take too long), and statistics on lock acquisition.</Description>
     <Company>SmartLock</Company>
-    <Version>1.0.1</Version>
+    <Version>1.1</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
