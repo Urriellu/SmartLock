@@ -15,7 +15,7 @@ class Program
         SmartLocker.OnLockDelayed += (e) => Debug.WriteLine(e.Msg);
         SmartLocker.OnLockTimedOut += (e) => Debug.WriteLine(e.Msg);
 
-        SmartLocker lockobj = new SmartLocker();
+        SmartLocker lockobj = new();
 
         // Let's create a second thread that simply tries to acquire the lock and print a message...
         bool finished = false;
@@ -55,17 +55,17 @@ class Program
         // ==============================================================
 
         // You can also have a block of code that only executes after acquiring multiple locks...
-        SmartLocker anotherlocker = new SmartLocker();
+        SmartLocker anotherlocker = new();
         lockobj.Combine(anotherlocker).PatientLock(() => Debug.WriteLine($"This code is probably blocking multiple other threads, the ones locked by both '{nameof(lockobj)}' and '{nameof(anotherlocker)}'."));
 
         // ==============================================================
 
         // You can block many threads, and these "combined locks" can also return values
 
-        List<SmartLocker> manylockers = new List<SmartLocker>();
+        List<SmartLocker> manylockers = new();
         for (int i = 0; i < 20; i++) // let's create a bunch of locker objects and threads
         {
-            SmartLocker oneMoreLocker = new SmartLocker();
+            SmartLocker oneMoreLocker = new();
             manylockers.Add(oneMoreLocker);
             Task.Factory.StartNew(() =>
             {

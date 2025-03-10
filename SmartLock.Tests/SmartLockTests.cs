@@ -14,7 +14,7 @@ public class SmartLockTests
     {
         try { Thread.CurrentThread.Name = nameof(T01_PatientLockTest); } catch { }
 
-        SmartLocker locker = new SmartLocker();
+        SmartLocker locker = new();
 
         bool isLockedByMain = false;
 
@@ -83,11 +83,11 @@ public class SmartLockTests
         };
         SmartLocker.OnLockDelayed += (err) => Assert.Fail();
 
-        SmartLocker locker = new SmartLocker();
+        SmartLocker locker = new();
 
         bool testfinished = false;
-        AutoResetEvent waitForeverStarted = new AutoResetEvent(false);
-        AutoResetEvent waitForever = new AutoResetEvent(false);
+        AutoResetEvent waitForeverStarted = new(false);
+        AutoResetEvent waitForever = new(false);
 
         Task taskLockForever = Task.Factory.StartNew(() =>
         {
@@ -162,10 +162,10 @@ public class SmartLockTests
             amountwarns++;
         };
 
-        AutoResetEvent firstLockEntered = new AutoResetEvent(false);
-        AutoResetEvent secondLockEntered = new AutoResetEvent(false);
-        SmartLocker lock1 = new SmartLocker();
-        SmartLocker lock2 = new SmartLocker();
+        AutoResetEvent firstLockEntered = new(false);
+        AutoResetEvent secondLockEntered = new(false);
+        SmartLocker lock1 = new();
+        SmartLocker lock2 = new();
 
         bool mainWaitedAndExecuted = false;
         bool mainreleased = false;
@@ -229,7 +229,7 @@ public class SmartLockTests
 
         int blocksExecuted = 0;
 
-        SmartLocker locker = new SmartLocker();
+        SmartLocker locker = new();
         Debug.WriteLine($"Going to enter first lock...");
         locker.HardLock(() =>
         {

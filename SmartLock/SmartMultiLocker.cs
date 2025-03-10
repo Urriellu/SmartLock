@@ -30,8 +30,8 @@ public class SmartMultiLocker
     public void PatientLock(Action action, TimeSpan? warnevery = null)
     {
         int acquired = 0;
-        SemaphoreSlim readyToReleaseAll = new SemaphoreSlim(0);
-        SemaphoreSlim smMaybeAllAlreadyAcquired = new SemaphoreSlim(0);
+        SemaphoreSlim readyToReleaseAll = new(0);
+        SemaphoreSlim smMaybeAllAlreadyAcquired = new(0);
         void commonActionAfterEntering()
         {
             acquired++;
@@ -40,7 +40,7 @@ public class SmartMultiLocker
         }
 
         // Start acquiring locks...
-        List<Task> acquiringTasks = new List<Task>();
+        List<Task> acquiringTasks = new();
         foreach (SmartLocker toLock in LockObjs)
         {
             acquiringTasks.Add(Task.Factory.StartNew(() =>
@@ -70,8 +70,8 @@ public class SmartMultiLocker
     public T PatientLock<T>(Func<T> action, TimeSpan? warnevery = null)
     {
         int acquired = 0;
-        SemaphoreSlim readyToReleaseAll = new SemaphoreSlim(0);
-        SemaphoreSlim smMaybeAllAlreadyAcquired = new SemaphoreSlim(0);
+        SemaphoreSlim readyToReleaseAll = new(0);
+        SemaphoreSlim smMaybeAllAlreadyAcquired = new(0);
         void commonActionAfterEntering()
         {
             acquired++;
@@ -80,7 +80,7 @@ public class SmartMultiLocker
         }
 
         // Start acquiring locks...
-        List<Task> acquiringTasks = new List<Task>();
+        List<Task> acquiringTasks = new();
         foreach (var toLock in LockObjs)
         {
             acquiringTasks.Add(Task.Factory.StartNew(() =>
@@ -112,8 +112,8 @@ public class SmartMultiLocker
     public void LazyLock(Action action, TimeSpan? runAnywayAfter = null)
     {
         int acquired = 0;
-        SemaphoreSlim readyToReleaseAll = new SemaphoreSlim(0);
-        SemaphoreSlim smMaybeAllAlreadyAcquired = new SemaphoreSlim(0);
+        SemaphoreSlim readyToReleaseAll = new(0);
+        SemaphoreSlim smMaybeAllAlreadyAcquired = new(0);
         void commonActionAfterEntering()
         {
             acquired++;
@@ -122,7 +122,7 @@ public class SmartMultiLocker
         }
 
         // Start acquiring locks...
-        List<Task> acquiringTasks = new List<Task>();
+        List<Task> acquiringTasks = new();
         foreach (var toLock in LockObjs)
         {
             acquiringTasks.Add(Task.Factory.StartNew(() =>
@@ -153,8 +153,8 @@ public class SmartMultiLocker
     public T LazyLock<T>(Func<T> action, TimeSpan? timeout = null)
     {
         int acquired = 0;
-        SemaphoreSlim readyToReleaseAll = new SemaphoreSlim(0);
-        SemaphoreSlim smMaybeAllAlreadyAcquired = new SemaphoreSlim(0);
+        SemaphoreSlim readyToReleaseAll = new(0);
+        SemaphoreSlim smMaybeAllAlreadyAcquired = new(0);
         void commonActionAfterEntering()
         {
             acquired++;
@@ -163,7 +163,7 @@ public class SmartMultiLocker
         }
 
         // Start acquiring locks...
-        List<Task> acquiringTasks = new List<Task>();
+        List<Task> acquiringTasks = new();
         foreach (var toLock in LockObjs)
         {
             acquiringTasks.Add(Task.Factory.StartNew(() =>
@@ -195,8 +195,8 @@ public class SmartMultiLocker
     public void HardLock(Action action, TimeSpan? dieafter = null)
     {
         int acquired = 0;
-        SemaphoreSlim readyToReleaseAll = new SemaphoreSlim(0);
-        SemaphoreSlim smMaybeAllAlreadyAcquired = new SemaphoreSlim(0);
+        SemaphoreSlim readyToReleaseAll = new(0);
+        SemaphoreSlim smMaybeAllAlreadyAcquired = new(0);
         void commonActionAfterEntering()
         {
             acquired++;
@@ -205,7 +205,7 @@ public class SmartMultiLocker
         }
 
         // Start acquiring locks...
-        List<Task> acquiringTasks = new List<Task>();
+        List<Task> acquiringTasks = new();
         foreach (var toLock in LockObjs)
         {
             acquiringTasks.Add(Task.Factory.StartNew(() =>
@@ -235,8 +235,8 @@ public class SmartMultiLocker
     public T HardLock<T>(Func<T> action, TimeSpan? dieafter = null)
     {
         int acquired = 0;
-        SemaphoreSlim readyToReleaseAll = new SemaphoreSlim(0);
-        SemaphoreSlim smMaybeAllAlreadyAcquired = new SemaphoreSlim(0);
+        SemaphoreSlim readyToReleaseAll = new(0);
+        SemaphoreSlim smMaybeAllAlreadyAcquired = new(0);
         void commonActionAfterEntering()
         {
             acquired++;
@@ -245,7 +245,7 @@ public class SmartMultiLocker
         }
 
         // Start acquiring locks...
-        List<Task> acquiringTasks = new List<Task>();
+        List<Task> acquiringTasks = new();
         foreach (var toLock in LockObjs)
         {
             acquiringTasks.Add(Task.Factory.StartNew(() =>

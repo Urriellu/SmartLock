@@ -11,7 +11,7 @@ namespace SmartLock;
 /// </summary>
 public class SmartLocker
 {
-    private readonly object lockobj = new object();
+    private readonly object lockobj = new();
 
     /// <summary>
     /// <see cref="Thread.ManagedThreadId"/> of the <see cref="Thread"/> that is currently keeping this object locked and is blocking other threads from executing.
@@ -102,7 +102,7 @@ public class SmartLocker
     /// <summary>Average time awaited before executing locked blocks of code. This includes expired Lazy Locks (because their code gets executed anyway) but does NOT include expired expired Hard Locks (because their code doesn't get executed).</summary>
     public TimeSpan AverageWait => AmountLocks > 0 ? TotalWait / AmountLocks : TimeSpan.Zero;
 
-    private readonly object statsLocker = new object();
+    private readonly object statsLocker = new();
 
     /// <summary>
     /// Tries to acquire a lock for a given amount of time (or the <see cref="DefaultTimeout"/> default time), but if the lock is not acquired the event <see cref="OnLockTimedOut"/> is triggered and the code executes anyway.
@@ -306,11 +306,11 @@ public class SmartLocker
     /// <remarks>
     /// It is recommended to list all external libraries that your program uses which create threads/tasks which eventually hold <see cref="SmartLocker"/> objects inside your code. For example, if you use a third-party WebSocket Server, this server will probably spawn a thread per user request, and if you don't add here the WebSocket server namespace, your stack trace logging will be filled with internal WebSocket Server method calls.
     /// </remarks>
-    public static readonly List<string> NamespacesToIgnoreInStackTrace = new List<string>();
+    public static readonly List<string> NamespacesToIgnoreInStackTrace = new();
 
     static string GetStackTrace()
     {
-        StackTrace trace = new StackTrace();
+        StackTrace trace = new();
         string threadID = Thread.CurrentThread.Name ?? "(unnamed thread)";
         List<string> traceLines = trace.ToString().Replace("\r\n", "\n").Replace("\n\r", "\n").Replace("\r", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries).Where(L => !L.Contains(typeof(SmartLocker).FullName)).ToList();
         while (traceLines.Count > 0 && (traceLines.Last().TrimStart().StartsWith("at System.") || NamespacesToIgnoreInStackTrace.Any(n => traceLines.Last().TrimStart().StartsWith($"at {n}.")))) traceLines.RemoveAt(traceLines.Count - 1); // remove not-my-code stracktrace
@@ -327,5 +327,5 @@ public class SmartLocker
     }
 
     /// <summary>Combine multiple <see cref="SmartLocker"/> objects like this one to be able to lock all of them at the same time.</summary>
-    public SmartMultiLocker Combine(params SmartLocker[] otherSmartLocks) => new SmartMultiLocker(new SmartLocker[] {this}.Concat(otherSmartLocks).ToArray());
+    public SmartMultiLocker Combine(params SmartLocker[] otherSmartLocks) => new(new SmartLocker[] {this}.Concat(otherSmartLocks).ToArray());
 }
