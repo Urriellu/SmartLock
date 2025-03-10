@@ -109,12 +109,12 @@ public class SmartLocker
     /// </summary>
     /// <param name="action">Code to be executed only after acquiring the lock (or timing out).</param>
     /// <param name="runAnywayAfter">The code will be executed after waiting for this amount of time even if it fails to lock.</param>
-    public void LazyLock(Action action, TimeSpan? runAnywayAfter = null)
+    public void LazyLock(Action action, TimeSpan? runAnywayAfter = null, CancellationToken? token = null)
     {
         runAnywayAfter ??= DefaultTimeout;
         try
         {
-            Enter(runAnywayAfter.Value, keepretrying: false, throwexception: false);
+            Enter(runAnywayAfter.Value, keepretrying: false, throwexception: false, token: token);
             action.Invoke();
         }
         finally { Exit(); }
@@ -126,13 +126,13 @@ public class SmartLocker
     /// <typeparam name="T">Type returned by the action to be executed within the lock.</typeparam>
     /// <param name="action">Code to be executed only after acquiring the lock (or timing out).</param>
     /// <param name="runAnywayAfter">The code will be executed after waiting for this amount of time even if it fails to lock.</param>
-    public T LazyLock<T>(Func<T> action, TimeSpan? runAnywayAfter = null)
+    public T LazyLock<T>(Func<T> action, TimeSpan? runAnywayAfter = null, CancellationToken? token = null)
     {
         T ret;
         runAnywayAfter ??= DefaultTimeout;
         try
         {
-            Enter(runAnywayAfter.Value, keepretrying: false, throwexception: false);
+            Enter(runAnywayAfter.Value, keepretrying: false, throwexception: false, token: token);
             ret = action.Invoke();
         }
         finally { Exit(); }
@@ -145,12 +145,12 @@ public class SmartLocker
     /// </summary>
     /// <param name="action">Code to be executed only after acquiring the lock (or timing out).</param>
     /// <param name="warnevery">Executes the <see cref="OnLockDelayed"/> every time it times out without acquiring the lock.</param>
-    public void PatientLock(Action action, TimeSpan? warnevery = null)
+    public void PatientLock(Action action, TimeSpan? warnevery = null, CancellationToken? token = null)
     {
         warnevery ??= DefaultTimeout;
         try
         {
-            Enter(warnevery.Value, keepretrying: true, throwexception: false);
+            Enter(warnevery.Value, keepretrying: true, throwexception: false, token: token);
             action.Invoke();
         }
         finally { Exit(); }
@@ -161,13 +161,13 @@ public class SmartLocker
     /// </summary>
     /// <param name="action">Code to be executed only after acquiring the lock (or timing out).</param>
     /// <param name="warnevery">Executes the <see cref="OnLockDelayed"/> every time it times out without acquiring the lock.</param>
-    public T PatientLock<T>(Func<T> action, TimeSpan? warnevery = null)
+    public T PatientLock<T>(Func<T> action, TimeSpan? warnevery = null, CancellationToken? token = null)
     {
         T ret;
         warnevery ??= DefaultTimeout;
         try
         {
-            Enter(warnevery.Value, keepretrying: true, throwexception: false);
+            Enter(warnevery.Value, keepretrying: true, throwexception: false, token: token);
             ret = action.Invoke();
         }
         finally { Exit(); }
@@ -180,12 +180,12 @@ public class SmartLocker
     /// </summary>
     /// <param name="action">Code to be executed only after (and if) acquiring the lock.</param>
     /// <param name="dieafter">Throws an exception if the lock is not acquired in this time.</param>
-    public void HardLock(Action action, TimeSpan? dieafter = null)
+    public void HardLock(Action action, TimeSpan? dieafter = null, CancellationToken? token = null)
     {
         dieafter ??= DefaultTimeout;
         try
         {
-            Enter(dieafter.Value, keepretrying: false, throwexception: true);
+            Enter(dieafter.Value, keepretrying: false, throwexception: true, token: token);
             action.Invoke();
         }
         finally { Exit(); }
@@ -197,7 +197,7 @@ public class SmartLocker
     /// <remarks>This is used for creating multi-locks while avoiding race conditions between different <see cref="SmartLocker"/> objects. When you need to acquire multiple locks at the same time you should use a <see cref="HardLockWithRetries"/> first and nest inside it as many <see cref="HardLock"/> as you need.</remarks>
     /// <param name="action"></param>
     /// <param name="retryAfter"></param>
-    public void HardLockWithRetries(Action action, TimeSpan retryAfter)
+    public void HardLockWithRetries(Action action, TimeSpan retryAfter, CancellationToken? token = null)
     {
         bool retry = true;
         while (retry)
@@ -225,13 +225,13 @@ public class SmartLocker
     /// </summary>
     /// <param name="action">Code to be executed only after (and if) acquiring the lock.</param>
     /// <param name="dieafter">Throws an exception if the lock is not acquired in this time.</param>
-    public T HardLock<T>(Func<T> action, TimeSpan? dieafter = null)
+    public T HardLock<T>(Func<T> action, TimeSpan? dieafter = null, CancellationToken? token = null)
     {
         T ret;
         dieafter ??= DefaultTimeout;
         try
         {
-            Enter(dieafter.Value, keepretrying: false, throwexception: true);
+            Enter(dieafter.Value, keepretrying: false, throwexception: true, token: token);
             ret = action.Invoke();
         }
         finally { Exit(); }
@@ -239,15 +239,15 @@ public class SmartLocker
         return ret;
     }
 
-    void Enter(TimeSpan timeout, bool keepretrying, bool throwexception)
+    void Enter(TimeSpan timeout, bool keepretrying, bool throwexception, CancellationToken? token)
     {
         Stopwatch sw = Stopwatch.StartNew();
         bool locked;
         do
         {
+            if (token?.IsCancellationRequested ?? false) throw new OperationCanceledException(token.Value);
             locked = Monitor.TryEnter(lockobj, timeout);
-            if (locked)
-                sw.Stop();
+            if (locked) sw.Stop();
             else
             {
                 if (throwexception)
@@ -327,5 +327,5 @@ public class SmartLocker
     }
 
     /// <summary>Combine multiple <see cref="SmartLocker"/> objects like this one to be able to lock all of them at the same time.</summary>
-    public SmartMultiLocker Combine(params SmartLocker[] otherSmartLocks) => new(new SmartLocker[] {this}.Concat(otherSmartLocks).ToArray());
+    public SmartMultiLocker Combine(params SmartLocker[] otherSmartLocks) => new(new SmartLocker[] { this }.Concat(otherSmartLocks).ToArray());
 }

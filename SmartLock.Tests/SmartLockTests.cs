@@ -225,7 +225,7 @@ public class SmartLockTests
         try { Thread.CurrentThread.Name = nameof(T04_ReentryTest); } catch { }
 
         SmartLocker.OnLockTimedOut += (err) => Assert.Fail();
-        SmartLocker.OnLockDelayed += (err) => Assert.Fail();
+        SmartLocker.OnLockDelayed += (err) => Debug.WriteLine(err);
 
         int blocksExecuted = 0;
 
@@ -252,4 +252,79 @@ public class SmartLockTests
 
         Assert.AreEqual(3, blocksExecuted);
     }
+
+    [TestMethod, Timeout(60 * 1000)]
+    public void T05_CancellationTokenTest()
+    {
+        try { Thread.CurrentThread.Name = nameof(T05_CancellationTokenTest); } catch { }
+
+        int delayCount = 0;
+        SemaphoreSlim semWaitUntilDelayed = new(0, 1);
+
+        SmartLocker.OnLockTimedOut += (err) => Assert.Fail();
+        SmartLocker.OnLockDelayed += (err) =>
+        {
+            Debug.WriteLine(err);
+            Interlocked.Increment(ref delayCount);
+            semWaitUntilDelayed.Release();
+        };
+
+        SmartLocker locker = new();
+        SemaphoreSlim semTestFinished = new(0, 1);
+        CancellationTokenSource cts2 = new();
+
+        SemaphoreSlim semWaitUntilLocked = new(0, 1);
+        bool firstLockEntered = false;
+        Task t1 = Task.Factory.StartNew(() =>
+        {
+            Thread.CurrentThread.Name = "First locking thread, waiting forever";
+            Thread.Sleep(TimeSpan.FromSeconds(1));
+            locker.PatientLock(() =>
+            {
+                firstLockEntered = true;
+                semWaitUntilLocked.Release();
+                semTestFinished.Wait();
+            }, TimeSpan.FromSeconds(5));
+        });
+        Assert.IsFalse(firstLockEntered);
+
+        semWaitUntilLocked.Wait(); // wait until the first thread has locked the object
+
+        SemaphoreSlim semWaitUntilSecondThreadEntered = new(0, 1);
+        SemaphoreSlim semWaitUntilSecondThreadCanceled = new(0, 1);
+        bool secondLockEntered = false;
+        Task t2 = Task.Factory.StartNew(() =>
+        {
+            Thread.CurrentThread.Name = "Second locking thread, waiting forever";
+            try
+            {
+                locker.PatientLock(() =>
+            {
+                Assert.IsTrue(firstLockEntered);
+                secondLockEntered = true;
+                semWaitUntilSecondThreadEntered.Release();
+                Assert.Fail("This code should never be executed, because we should have canceled the lock.");
+            }, TimeSpan.FromSeconds(5), cts2.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                semWaitUntilSecondThreadCanceled.Release();
+            }
+        });
+
+        Task.Delay(TimeSpan.FromSeconds(5)).Wait(); // wait until the second thread has tried to lock
+        Assert.IsTrue(firstLockEntered);
+        Assert.IsFalse(secondLockEntered);
+
+        semWaitUntilDelayed.Wait(); // wait until the second thread has been delayed
+        cts2.Cancel(); // stop waiting on the second thread
+        semWaitUntilSecondThreadCanceled.Wait(); // wait until the second thread has been actually canceled
+        Assert.AreEqual(0, semWaitUntilSecondThreadEntered.CurrentCount);
+        semTestFinished.Release(); // release the first thread
+
+        Task.WaitAll(t1, t2); // wait until all background tasks finished
+        Assert.AreNotEqual(0, delayCount);
+        Assert.AreEqual(0, semWaitUntilSecondThreadEntered.CurrentCount);
+    }
+
 }
