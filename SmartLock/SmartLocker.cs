@@ -32,12 +32,12 @@ public class SmartLocker
     public TimeSpan? HeldFor => DateTime.Now - HeldSince;
 
     /// <summary>
-    /// Event triggered when a <see cref="HardLock(Action, TimeSpan?)"/> or a <see cref="LazyLock(Action, TimeSpan?)"/> has timed out and therefore the inner code will be either executed (in case of a Lazy Lock) or an exception is about to be thrown (in case of a Hard Lock).
+    /// Event triggered when a <see cref="HardLock(Action, TimeSpan?, CancellationToken?)"/> or a <see cref="LazyLock(Action, TimeSpan?, CancellationToken?)"/> has timed out and therefore the inner code will be either executed (in case of a Lazy Lock) or an exception is about to be thrown (in case of a Hard Lock).
     /// </summary>
     public static event Action<(SmartLocker TimedOutLockObj, string Msg)> OnLockTimedOut;
 
     /// <summary>
-    /// Event triggered when a <see cref="PatientLock(Action, TimeSpan?)"/> is taking too long to acquire a lock, but it's still waiting.
+    /// Event triggered when a <see cref="PatientLock(Action, TimeSpan?, CancellationToken?)"/> is taking too long to acquire a lock, but it's still waiting.
     /// </summary>
     public static event Action<(SmartLocker DelayedLockObj, string Msg)> OnLockDelayed;
 
@@ -109,6 +109,7 @@ public class SmartLocker
     /// </summary>
     /// <param name="action">Code to be executed only after acquiring the lock (or timing out).</param>
     /// <param name="runAnywayAfter">The code will be executed after waiting for this amount of time even if it fails to lock.</param>
+    /// <param name="token">Cancellation token to cancel the lock request.</param>
     public void LazyLock(Action action, TimeSpan? runAnywayAfter = null, CancellationToken? token = null)
     {
         runAnywayAfter ??= DefaultTimeout;
@@ -126,6 +127,7 @@ public class SmartLocker
     /// <typeparam name="T">Type returned by the action to be executed within the lock.</typeparam>
     /// <param name="action">Code to be executed only after acquiring the lock (or timing out).</param>
     /// <param name="runAnywayAfter">The code will be executed after waiting for this amount of time even if it fails to lock.</param>
+    /// <param name="token">Cancellation token to cancel the lock request.</param>
     public T LazyLock<T>(Func<T> action, TimeSpan? runAnywayAfter = null, CancellationToken? token = null)
     {
         T ret;
@@ -145,6 +147,7 @@ public class SmartLocker
     /// </summary>
     /// <param name="action">Code to be executed only after acquiring the lock (or timing out).</param>
     /// <param name="warnevery">Executes the <see cref="OnLockDelayed"/> every time it times out without acquiring the lock.</param>
+    /// <param name="token">Cancellation token to cancel the lock request.</param>
     public void PatientLock(Action action, TimeSpan? warnevery = null, CancellationToken? token = null)
     {
         warnevery ??= DefaultTimeout;
@@ -161,6 +164,7 @@ public class SmartLocker
     /// </summary>
     /// <param name="action">Code to be executed only after acquiring the lock (or timing out).</param>
     /// <param name="warnevery">Executes the <see cref="OnLockDelayed"/> every time it times out without acquiring the lock.</param>
+    /// <param name="token">Cancellation token to cancel the lock request.</param>
     public T PatientLock<T>(Func<T> action, TimeSpan? warnevery = null, CancellationToken? token = null)
     {
         T ret;
@@ -180,6 +184,7 @@ public class SmartLocker
     /// </summary>
     /// <param name="action">Code to be executed only after (and if) acquiring the lock.</param>
     /// <param name="dieafter">Throws an exception if the lock is not acquired in this time.</param>
+    /// <param name="token">Cancellation token to cancel the lock request.</param>
     public void HardLock(Action action, TimeSpan? dieafter = null, CancellationToken? token = null)
     {
         dieafter ??= DefaultTimeout;
@@ -195,8 +200,9 @@ public class SmartLocker
     /// Try to enter a Hard Lock which instead of dying it automatically tries to acquire the lock again. This behavior in practice is similar to a Patient Lock, but if the Action inside this Hard Lock contains nested Hard Locks and those Hard Locks time out, this "Hard Lock With Retries" will try to acquire the nested Hard Locks again. 
     /// </summary>
     /// <remarks>This is used for creating multi-locks while avoiding race conditions between different <see cref="SmartLocker"/> objects. When you need to acquire multiple locks at the same time you should use a <see cref="HardLockWithRetries"/> first and nest inside it as many <see cref="HardLock"/> as you need.</remarks>
-    /// <param name="action"></param>
-    /// <param name="retryAfter"></param>
+    /// <param name="action">Code to be executed only after (and if) acquiring the lock.</param>
+    /// <param name="retryAfter">Time to wait before retrying to acquire the lock.</param>
+    /// <param name="token">Cancellation token to cancel the lock request.</param>
     public void HardLockWithRetries(Action action, TimeSpan retryAfter, CancellationToken? token = null)
     {
         bool retry = true;
@@ -205,7 +211,7 @@ public class SmartLocker
             try
             {
                 retry = false;
-                HardLock(action, retryAfter);
+                HardLock(action, retryAfter, token);
             }
             catch (HardLockTimeoutException) { retry = true; }
             catch (AggregateException ex)
@@ -225,6 +231,7 @@ public class SmartLocker
     /// </summary>
     /// <param name="action">Code to be executed only after (and if) acquiring the lock.</param>
     /// <param name="dieafter">Throws an exception if the lock is not acquired in this time.</param>
+    /// <param name="token">Cancellation token to cancel the lock request.</param>
     public T HardLock<T>(Func<T> action, TimeSpan? dieafter = null, CancellationToken? token = null)
     {
         T ret;
